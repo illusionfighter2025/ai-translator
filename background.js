@@ -59,24 +59,47 @@ function createContextMenus() {
   });
 }
 
+// Inject content.js into a tab if it isn't already (e.g. tab was open before
+// the extension loaded). Returns true if the content script is reachable.
+async function ensureContentScript(tabId) {
+  try {
+    const res = await chrome.tabs.sendMessage(tabId, { type: "ping" });
+    if (res?.ok) return true;
+  } catch { /* not injected yet */ }
+  try {
+    await chrome.scripting.insertCSS({ target: { tabId }, files: ["content.css"] });
+  } catch { /* CSS optional */ }
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+    await new Promise(r => setTimeout(r, 250));
+    return true;
+  } catch { return false; }
+}
+
+async function sendToTab(tabId, message) {
+  const ok = await ensureContentScript(tabId);
+  if (!ok) return false;
+  try { await chrome.tabs.sendMessage(tabId, message); return true; } catch { return false; }
+}
+
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (!tab?.id) return;
   if (info.menuItemId === "ait-translate-selection") {
-    chrome.tabs.sendMessage(tab.id, { type: "translateSelection", text: info.selectionText });
+    sendToTab(tab.id, { type: "translateSelection", text: info.selectionText });
   } else if (info.menuItemId === "ait-translate-page") {
-    chrome.tabs.sendMessage(tab.id, { type: "translatePage" });
+    sendToTab(tab.id, { type: "translatePage" });
   } else if (info.menuItemId === "ait-summarize-page") {
-    chrome.tabs.sendMessage(tab.id, { type: "summarizePage" });
+    sendToTab(tab.id, { type: "summarizePage" });
   }
 });
 
 chrome.commands.onCommand.addListener((command) => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
     const tab = tabs[0];
     if (!tab?.id) return;
-    if (command === "translate-page") chrome.tabs.sendMessage(tab.id, { type: "translatePage" });
-    else if (command === "summarize-page") chrome.tabs.sendMessage(tab.id, { type: "summarizePage" });
-    else if (command === "toggle-selection-translate") chrome.tabs.sendMessage(tab.id, { type: "translateSelectionFromCommand" });
+    if (command === "translate-page") sendToTab(tab.id, { type: "translatePage" });
+    else if (command === "summarize-page") sendToTab(tab.id, { type: "summarizePage" });
+    else if (command === "toggle-selection-translate") sendToTab(tab.id, { type: "translateSelectionFromCommand" });
   });
 });
 

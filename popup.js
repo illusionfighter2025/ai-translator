@@ -72,9 +72,32 @@ async function getActiveTab() {
   return tabs[0];
 }
 
+// Content scripts only auto-inject on navigations that happen after the
+// extension is loaded. Tabs that were already open (e.g. before install/update)
+// have no content script, so sendMessage fails with "Receiving end does not
+// exist." Detect that and programmatically inject content.js/content.css.
+async function ensureContentScript(tabId) {
+  try {
+    const res = await chrome.tabs.sendMessage(tabId, { type: "ping" });
+    if (res?.ok) return true;
+  } catch { /* not injected yet */ }
+  try {
+    await chrome.scripting.insertCSS({ target: { tabId }, files: ["content.css"] });
+  } catch { /* CSS optional */ }
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+    await new Promise(r => setTimeout(r, 250));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 async function sendToTab(type) {
   const tab = await getActiveTab();
-  if (!tab?.id) return;
+  if (!tab?.id) { setStatus("No active tab.", "err"); return; }
+  const ok = await ensureContentScript(tab.id);
+  if (!ok) { setStatus("Cannot reach this page. Try reloading it first.", "err"); return; }
   try {
     await chrome.tabs.sendMessage(tab.id, { type });
   } catch (e) {
@@ -85,6 +108,12 @@ async function sendToTab(type) {
 async function refreshPageState() {
   const tab = await getActiveTab();
   if (!tab?.id) return;
+  const ok = await ensureContentScript(tab.id);
+  if (!ok) {
+    els.translatePageLabel.textContent = "Translate Page";
+    els.translatePageBtn.classList.add("primary");
+    return;
+  }
   try {
     const res = await chrome.tabs.sendMessage(tab.id, { type: "getState" });
     if (res?.ok && res.pageTranslated) {

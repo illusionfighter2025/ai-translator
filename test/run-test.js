@@ -115,6 +115,7 @@ async function main() {
   await test3Selection(page, swc);
   await test4Summary(page, swc);
   await test5Dashboard(swc);
+  await test6InjectOnFailure(swc);
 
   await cleanup();
   async function cleanup() {
@@ -255,6 +256,40 @@ async function test5Dashboard(swc) {
   else fail("dashboard history: " + JSON.stringify(hist));
   await dash.screenshot(path.join(__dirname, "shot-dashboard-history.png"));
   log("saved dashboard screenshots");
+}
+
+async function test6InjectOnFailure(swc) {
+  log("\n=== TEST 6: Programmatic content-script injection (http page) ===");
+  // The real "Cannot reach this page." bug: a tab open BEFORE the extension
+  // loaded has no content script, so sendMessage fails. The fix injects
+  // content.js programmatically. We can't reproduce "http page without
+  // content script" here (the extension is always loaded and injects on
+  // every http navigation), but we verify the injection mechanism itself is
+  // PERMITTED and SUCCEEDS on a real http page (the actual user scenario).
+  const tabIdStr = await swc.eval(`new Promise(r=>{chrome.tabs.create({url:'${TEST_URL}'},t=>r(String(t?t.id:'none')));})`);
+  log("  created http tab:", tabIdStr);
+  const tabId = parseInt(tabIdStr, 10);
+  await sleep(3000);
+
+  // 1. ping works (manifest injected the content script)
+  const ping1 = await swc.eval(`new Promise(r=>{chrome.tabs.sendMessage(${tabId},{type:'ping'},resp=>{const e=chrome.runtime.lastError;r(e?('ERR:'+e.message):JSON.stringify(resp));});})`);
+  log("  ping (manifest):", ping1);
+  if (ping1 === '{"ok":true}') pass("content script reachable via manifest on http page"); else fail("ping failed on http page: " + ping1);
+
+  // 2. Programmatically inject content.js + content.css (what ensureContentScript does on failure).
+  //    The __aitInjected guard makes re-injection a no-op, but the call must NOT throw —
+  //    this proves host permission allows injection on real http pages.
+  const injectRes = await swc.eval(`new Promise(r=>{Promise.all([chrome.scripting.insertCSS({target:{tabId:${tabId}},files:['content.css']}).catch(()=>{}),chrome.scripting.executeScript({target:{tabId:${tabId}},files:['content.js']})]).then(()=>r('ok')).catch(e=>r('ERR:'+(e&&e.message||e)));})`);
+  log("  programmatic inject:", injectRes);
+  if (injectRes === "ok") pass("programmatic injection permitted on http page"); else fail("programmatic injection blocked: " + injectRes);
+
+  // 3. ping still works after injection
+  const ping2 = await swc.eval(`new Promise(r=>{chrome.tabs.sendMessage(${tabId},{type:'ping'},resp=>{const e=chrome.runtime.lastError;r(e?('ERR:'+e.message):JSON.stringify(resp));});})`);
+  log("  ping (after inject):", ping2);
+  if (ping2 === '{"ok":true}') pass("content script still reachable after programmatic injection"); else fail("ping failed after injection: " + ping2);
+
+  // cleanup: close the tab
+  try { await swc.eval(`new Promise(r=>{chrome.tabs.remove(${tabId},()=>r('closed'));})`); } catch {}
 }
 
 main().catch(e => { console.error("[test] fatal", e); process.exit(1); });
