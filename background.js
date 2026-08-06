@@ -182,37 +182,56 @@ function chatCompletionsUrl(baseUrl) {
 async function chatCompletion(settings, messages, options = {}) {
   if (!settings.apiKey) throw new Error("API Key is not configured. Open the extension popup to set it.");
   const url = chatCompletionsUrl(settings.baseUrl);
-  const body = {
-    model: options.model || settings.model,
-    messages,
-    temperature: options.temperature ?? settings.temperature,
-    max_tokens: options.maxTokens ?? settings.maxTokens,
-    stream: false
-  };
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${settings.apiKey}`
-    },
-    body: JSON.stringify(body)
-  });
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    throw new Error(`API error ${resp.status}: ${text.slice(0, 500)}`);
+  // Reasoning models (e.g. deepseek-v4-flash) spend tokens on chain-of-thought
+  // before the answer. If max_tokens is too small, reasoning consumes the whole
+  // budget, finish_reason becomes "length", and content comes back empty.
+  // Floor the budget at 512 and retry with a larger budget on truncation.
+  let maxTokens = Math.max(options.maxTokens ?? settings.maxTokens ?? 2048, 512);
+  const temperature = options.temperature ?? settings.temperature;
+  const model = options.model || settings.model;
+  let lastErr = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const body = { model, messages, temperature, max_tokens: maxTokens, stream: false };
+    let resp;
+    try {
+      resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${settings.apiKey}` },
+        body: JSON.stringify(body)
+      });
+    } catch (e) {
+      lastErr = "Network error: " + (e?.message || String(e));
+      if (attempt < 2) { await new Promise(r => setTimeout(r, 400 * (attempt + 1))); continue; }
+      throw new Error(lastErr);
+    }
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => "");
+      throw new Error(`API error ${resp.status}: ${text.slice(0, 500)}`);
+    }
+    const data = await resp.json();
+    const content = data?.choices?.[0]?.message?.content;
+    const finishReason = data?.choices?.[0]?.finish_reason;
+    if (content && content.trim()) {
+      return { ok: true, content: content.trim(), usage: data.usage, finishReason };
+    }
+    // Empty content. If truncated by token limit, retry with a bigger budget.
+    lastErr = finishReason === "length"
+      ? "Model response truncated (max_tokens too small for reasoning)."
+      : "Empty response from model.";
+    if (finishReason === "length" && attempt < 2) {
+      maxTokens = Math.min(8192, maxTokens * 2);
+      continue;
+    }
   }
-  const data = await resp.json();
-  const content = data?.choices?.[0]?.message?.content;
-  if (!content) throw new Error("Empty response from model.");
-  return { ok: true, content: content.trim(), usage: data.usage, finishReason: data?.choices?.[0]?.finish_reason };
+  throw new Error(lastErr || "Empty response from model.");
 }
 
 async function testConnection(settings) {
   try {
     const res = await chatCompletion(settings, [
-      { role: "system", content: "You are a connectivity test. Reply with: OK" },
+      { role: "system", content: "Reply with exactly: OK" },
       { role: "user", content: "ping" }
-    ], { maxTokens: 16, temperature: 0 });
+    ], { maxTokens: 512, temperature: 0 });
     return { ok: true, content: res.content };
   } catch (e) {
     return { ok: false, error: e?.message || String(e) };
