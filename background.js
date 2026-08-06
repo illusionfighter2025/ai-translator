@@ -5,6 +5,7 @@ const DEFAULTS = {
   apiKey: "",
   baseUrl: "https://api.deepseek.com",
   model: "deepseek-chat",
+  sourceLang: "auto",
   targetLang: "zh",
   autoSelection: true,
   temperature: 0.3,
@@ -14,9 +15,16 @@ const DEFAULTS = {
 };
 
 const LANG_LABELS = {
+  auto: "Auto-detect",
   zh: "中文",
   en: "English"
 };
+
+const HISTORY_KEY = "ait_history";
+const STATS_KEY = "ait_stats";
+const HISTORY_LIMIT = 200;
+
+const KIND_LABELS = { selection: "划词翻译", page: "整页翻译", summary: "网页总结" };
 
 // ---- Lifecycle ----
 chrome.runtime.onInstalled.addListener(async () => {
@@ -90,11 +98,61 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       } else if (msg.type === "chat") {
         const settings = await getSettings();
         const res = await chatCompletion(settings, msg.messages, msg.options || {});
+        if (msg.meta) {
+          recordHistory({
+            kind: msg.meta.kind || "chat",
+            source: msg.meta.source || "auto",
+            target: msg.meta.target || settings.targetLang || "zh",
+            sourceText: msg.meta.sourceText || "",
+            targetText: res.content || "",
+            url: msg.meta.url || "",
+            title: msg.meta.title || "",
+            model: settings.model,
+            tokens: res.usage?.total_tokens || 0,
+            promptTokens: res.usage?.prompt_tokens || 0,
+            completionTokens: res.usage?.completion_tokens || 0,
+            ok: true
+          });
+          addUsage(res.usage, settings.model, msg.meta.kind || "chat");
+        }
         sendResponse(res);
       } else if (msg.type === "translateBatch") {
         const settings = await getSettings();
         const res = await translateBatch(settings, msg.items, msg.source, msg.target);
+        if (msg.meta) {
+          recordHistory({
+            kind: msg.meta.kind || "page",
+            source: msg.meta.source || msg.source || "auto",
+            target: msg.meta.target || msg.target || settings.targetLang || "zh",
+            sourceText: (msg.meta.preview || msg.items || []).slice(0, 3).join(" / "),
+            targetText: res.translations ? res.translations.slice(0, 3).join(" / ") : "",
+            url: msg.meta.url || "",
+            title: msg.meta.title || "",
+            model: settings.model,
+            tokens: res.usage?.total_tokens || 0,
+            promptTokens: res.usage?.prompt_tokens || 0,
+            completionTokens: res.usage?.completion_tokens || 0,
+            count: msg.items?.length || 0,
+            ok: !!res.ok,
+            error: res.ok ? "" : res.error
+          });
+          addUsage(res.usage, settings.model, msg.meta.kind || "page");
+        }
         sendResponse(res);
+      } else if (msg.type === "getHistory") {
+        const data = await chrome.storage.local.get(HISTORY_KEY);
+        const history = data[HISTORY_KEY] || [];
+        const limit = typeof msg.limit === "number" ? msg.limit : history.length;
+        sendResponse({ ok: true, history: history.slice(0, limit) });
+      } else if (msg.type === "clearHistory") {
+        await chrome.storage.local.remove(HISTORY_KEY);
+        sendResponse({ ok: true });
+      } else if (msg.type === "getStats") {
+        const data = await chrome.storage.local.get(STATS_KEY);
+        sendResponse({ ok: true, stats: data[STATS_KEY] || emptyStats() });
+      } else if (msg.type === "resetStats") {
+        await chrome.storage.local.remove(STATS_KEY);
+        sendResponse({ ok: true });
       } else {
         sendResponse({ ok: false, error: "Unknown message type: " + msg.type });
       }
@@ -144,11 +202,7 @@ async function chatCompletion(settings, messages, options = {}) {
     throw new Error(`API error ${resp.status}: ${text.slice(0, 500)}`);
   }
   const data = await resp.json();
-  let content = data?.choices?.[0]?.message?.content;
-  if (!content) {
-    // Some reasoning models put output in reasoning_content when content is empty/null.
-    content = data?.choices?.[0]?.message?.reasoning_content;
-  }
+  const content = data?.choices?.[0]?.message?.content;
   if (!content) throw new Error("Empty response from model.");
   return { ok: true, content: content.trim(), usage: data.usage, finishReason: data?.choices?.[0]?.finish_reason };
 }
@@ -165,11 +219,59 @@ async function testConnection(settings) {
   }
 }
 
+// ---- History & stats ----
+function emptyStats() {
+  return {
+    totalRequests: 0,
+    totalTokens: 0,
+    promptTokens: 0,
+    completionTokens: 0,
+    byKind: { selection: { requests: 0, tokens: 0 }, page: { requests: 0, tokens: 0 }, summary: { requests: 0, tokens: 0 }, chat: { requests: 0, tokens: 0 } },
+    byModel: {}
+  };
+}
+
+async function recordHistory(entry) {
+  try {
+    const data = await chrome.storage.local.get(HISTORY_KEY);
+    const history = data[HISTORY_KEY] || [];
+    history.unshift({
+      id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+      time: Date.now(),
+      ...entry
+    });
+    if (history.length > HISTORY_LIMIT) history.length = HISTORY_LIMIT;
+    await chrome.storage.local.set({ [HISTORY_KEY]: history });
+  } catch (e) { /* non-fatal */ }
+}
+
+async function addUsage(usage, model, kind) {
+  try {
+    if (!usage) return;
+    const data = await chrome.storage.local.get(STATS_KEY);
+    const stats = data[STATS_KEY] || emptyStats();
+    const pt = usage.prompt_tokens || 0;
+    const ct = usage.completion_tokens || 0;
+    const tt = usage.total_tokens || (pt + ct);
+    stats.totalRequests += 1;
+    stats.totalTokens += tt;
+    stats.promptTokens += pt;
+    stats.completionTokens += ct;
+    const k = stats.byKind[kind] || (stats.byKind[kind] = { requests: 0, tokens: 0 });
+    k.requests += 1;
+    k.tokens += tt;
+    const m = stats.byModel[model] || (stats.byModel[model] = { requests: 0, tokens: 0 });
+    m.requests += 1;
+    m.tokens += tt;
+    await chrome.storage.local.set({ [STATS_KEY]: stats });
+  } catch (e) { /* non-fatal */ }
+}
+
 // ---- Batch translation ----
 // items: array of strings. Returns { ok, translations: string[] }
 // Translates each item individually for reliability with reasoning models.
 async function translateBatch(settings, items, source, target) {
-  if (!items?.length) return { ok: true, translations: [] };
+  if (!items?.length) return { ok: true, translations: [], usage: { total_tokens: 0, prompt_tokens: 0, completion_tokens: 0 } };
   const tgtLabel = LANG_LABELS[target] || target;
   const other = target === "zh" ? "English" : "中文";
   const sys = `You are a professional translation engine. ` +
@@ -179,7 +281,7 @@ async function translateBatch(settings, items, source, target) {
   const out = new Array(items.length).fill("");
   let okCount = 0;
   let lastErr = "";
-  // Sequential to avoid rate limits; pages typically have a modest number of nodes.
+  let usage = { total_tokens: 0, prompt_tokens: 0, completion_tokens: 0 };
   for (let i = 0; i < items.length; i++) {
     const text = items[i];
     if (!text || !text.trim()) { out[i] = text || ""; okCount++; continue; }
@@ -188,14 +290,22 @@ async function translateBatch(settings, items, source, target) {
         const res = await chatCompletion(settings, [
           { role: "system", content: sys },
           { role: "user", content: text }
-        ], { temperature: 0.2, maxTokens: Math.min(2048, Math.max(64, text.length * 4)) });
-        if (res.content) { out[i] = res.content; okCount++; break; }
+        ], { temperature: 0.2, maxTokens: Math.min(2048, Math.max(256, text.length * 4)) });
+        if (res.content) {
+          out[i] = res.content; okCount++;
+          if (res.usage) {
+            usage.total_tokens += res.usage.total_tokens || 0;
+            usage.prompt_tokens += res.usage.prompt_tokens || 0;
+            usage.completion_tokens += res.usage.completion_tokens || 0;
+          }
+          break;
+        }
         lastErr = "Empty response.";
       } catch (e) {
         lastErr = e?.message || String(e);
       }
     }
   }
-  if (!okCount) return { ok: false, error: lastErr || "All translations failed.", translations: out };
-  return { ok: true, translations: out };
+  if (!okCount) return { ok: false, error: lastErr || "All translations failed.", translations: out, usage };
+  return { ok: true, translations: out, usage };
 }

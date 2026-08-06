@@ -90,7 +90,7 @@
     await loadSettings();
     positionTooltipNearSelection();
     const target = settings?.targetLang || "zh";
-    const source = detectLang(text);
+    const source = (settings?.sourceLang && settings.sourceLang !== "auto") ? settings.sourceLang : detectLang(text);
     const other = target === "zh" ? "English" : "中文";
     const sys = `You are a professional translation engine. ` +
       `If the input is in English, translate it to 中文. If the input is in 中文, translate it to English. ` +
@@ -103,7 +103,8 @@
           { role: "system", content: sys },
           { role: "user", content: text }
         ],
-        options: { temperature: 0.2 }
+        options: { temperature: 0.2 },
+        meta: { kind: "selection", source, target, sourceText: text, url: location.href, title: document.title }
       });
       if (!res?.ok) throw new Error(res?.error || "Translation failed");
       const body = tooltipEl.querySelector(".ait-tooltip-body");
@@ -167,12 +168,13 @@
       }
       const items = nodes.map(n => n.nodeValue);
       const target = settings?.targetLang || "zh";
-      const source = "auto";
+      const source = settings?.sourceLang || "auto";
       const res = await chrome.runtime.sendMessage({
         type: "translateBatch",
         items,
         source,
-        target
+        target,
+        meta: { kind: "page", source, target, url: location.href, title: document.title, preview: items.slice(0, 3) }
       });
       if (!res?.ok) throw new Error(res?.error || "Batch translation failed");
       const translations = res.translations;
@@ -254,7 +256,8 @@
           { role: "system", content: sys },
           { role: "user", content: user }
         ],
-        options: { temperature: 0.3, maxTokens: 1024 }
+        options: { temperature: 0.3, maxTokens: 1024 },
+        meta: { kind: "summary", source: "auto", target: settings?.targetLang || "zh", sourceText: content.slice(0, 500), url: location.href, title: document.title }
       });
       if (!res?.ok) throw new Error(res?.error || "Summary failed");
       openModal("Page Summary", renderMarkdown(res.content), { showCopy: true });

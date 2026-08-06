@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Translator · 管理面板</title>
+  <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon">译</div>
+        <div>
+          <h1>AI Translator</h1>
+          <p>管理面板 · 配置、语言、统计与历史</p>
+        </div>
+      </div>
+      <nav class="tabs">
+        <button class="tab active" data-tab="config">配置</button>
+        <button class="tab" data-tab="language">语言</button>
+        <button class="tab" data-tab="stats">统计</button>
+        <button class="tab" data-tab="history">历史</button>
+      </nav>
+    </header>
+
+    <!-- ===== 配置 ===== -->
+    <main class="panel active" id="panel-config">
+      <section class="card">
+        <h2 class="card-title">API 提供方</h2>
+        <div class="field">
+          <label for="apiKey">API Key</label>
+          <div class="input-wrap">
+            <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off" spellcheck="false" />
+            <button type="button" class="reveal" id="revealKey">显示</button>
+          </div>
+          <p class="hint">密钥仅保存在本地浏览器 (chrome.storage.sync)，不会上传。</p>
+        </div>
+        <div class="field">
+          <label for="baseUrl">Base URL</label>
+          <input type="text" id="baseUrl" placeholder="https://api.deepseek.com" spellcheck="false" />
+          <p class="hint">兼容 OpenAI 协议的接口地址，扩展会自动追加 <code>/v1/chat/completions</code>。</p>
+        </div>
+        <div class="field">
+          <label for="model">模型</label>
+          <input type="text" id="model" placeholder="deepseek-chat" spellcheck="false" />
+          <p class="hint">例如 <code>deepseek-chat</code>、<code>gpt-4o-mini</code> 等。</p>
+        </div>
+        <div class="field-row2">
+          <div class="field">
+            <label for="temperature">Temperature</label>
+            <input type="number" id="temperature" min="0" max="2" step="0.1" />
+          </div>
+          <div class="field">
+            <label for="maxTokens">Max tokens</label>
+            <input type="number" id="maxTokens" min="64" max="8192" step="64" />
+          </div>
+        </div>
+        <div class="actions">
+          <button id="testBtn" class="btn ghost">测试连接</button>
+          <button id="saveBtn" class="btn primary">保存配置</button>
+        </div>
+        <div id="statusMsg" class="status-msg"></div>
+      </section>
+    </main>
+
+    <!-- ===== 语言 ===== -->
+    <main class="panel" id="panel-language">
+      <section class="card">
+        <h2 class="card-title">翻译语言</h2>
+        <p class="hint">设置划词翻译与整页翻译的默认源语言和目标语言。</p>
+        <div class="lang-pair">
+          <div class="field">
+            <label>源语言</label>
+            <div class="seg seg-wide">
+              <button data-lang="auto" class="seg-btn active">自动检测</button>
+              <button data-lang="zh" class="seg-btn">中文</button>
+              <button data-lang="en" class="seg-btn">English</button>
+            </div>
+          </div>
+          <div class="lang-arrow">→</div>
+          <div class="field">
+            <label>目标语言</label>
+            <div class="seg seg-wide">
+              <button data-lang="zh" class="seg-btn active">中文</button>
+              <button data-lang="en" class="seg-btn">English</button>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>选中文本时自动翻译</label>
+          <label class="switch">
+            <input type="checkbox" id="autoSelection" />
+            <span class="slider"></span>
+          </label>
+          <p class="hint">在网页上选中文字时自动弹出翻译浮窗。</p>
+        </div>
+        <div class="actions">
+          <button id="saveLangBtn" class="btn primary">保存语言设置</button>
+        </div>
+        <div id="langStatus" class="status-msg"></div>
+      </section>
+    </main>
+
+    <!-- ===== 统计 ===== -->
+    <main class="panel" id="panel-stats">
+      <section class="card">
+        <div class="stats-head">
+          <h2 class="card-title">Token 消耗统计</h2>
+          <button id="resetStatsBtn" class="btn ghost small">重置统计</button>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="stat-label">总请求数</div>
+            <div class="stat-value" id="statRequests">0</div>
+          </div>
+          <div class="stat-box primary">
+            <div class="stat-label">总 Token</div>
+            <div class="stat-value" id="statTotal">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">输入 Prompt</div>
+            <div class="stat-value" id="statPrompt">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">输出 Completion</div>
+            <div class="stat-value" id="statCompletion">0</div>
+          </div>
+        </div>
+        <h3 class="sub-title">按功能分类</h3>
+        <div class="breakdown" id="breakdownKind"></div>
+        <h3 class="sub-title">按模型分类</h3>
+        <div class="breakdown" id="breakdownModel"></div>
+      </section>
+    </main>
+
+    <!-- ===== 历史 ===== -->
+    <main class="panel" id="panel-history">
+      <section class="card">
+        <div class="stats-head">
+          <h2 class="card-title">翻译历史记录</h2>
+          <div class="head-actions">
+            <input type="search" id="historySearch" placeholder="搜索原文 / 译文 / 网址…" />
+            <button id="clearHistoryBtn" class="btn ghost small">清空历史</button>
+          </div>
+        </div>
+        <div id="historyList" class="history-list"></div>
+        <div id="historyEmpty" class="empty-state">暂无翻译记录。使用插件翻译或总结后，记录会出现在这里。</div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>AI Translator · 兼容 OpenAI / DeepSeek / OpenRouter 等 OpenAI 协议接口</p>
+    </footer>
+  </div>
+  <script src="dashboard.js"></script>
+</body>
+</html>

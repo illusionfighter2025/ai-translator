@@ -114,6 +114,7 @@ async function main() {
   await test2Restore(page, swc);
   await test3Selection(page, swc);
   await test4Summary(page, swc);
+  await test5Dashboard(swc);
 
   await cleanup();
   async function cleanup() {
@@ -194,6 +195,66 @@ async function test4Summary(page, swc) {
     }
   }
   fail("summary modal failed");
+}
+
+async function findPageTargetByUrl(urlFragment) {
+  for (let i = 0; i < 40; i++) {
+    const ts = await httpJson(`http://127.0.0.1:${PORT}/json`);
+    const t = ts.find(t => t.type === "page" && t.url.includes(urlFragment));
+    if (t) return t;
+    await sleep(500);
+  }
+  return null;
+}
+
+async function test5Dashboard(swc) {
+  log("\n=== TEST 5: Management dashboard ===");
+  // Open the dashboard page in a new tab via the service worker.
+  await swc.eval(`new Promise(r=>chrome.tabs.create({url:chrome.runtime.getURL('dashboard.html')},t=>r(String(t?t.id:'none'))))`);
+  const target = await findPageTargetByUrl("dashboard.html");
+  if (!target) { fail("dashboard tab not opened"); return; }
+  const dash = await connect(target.webSocketDebuggerUrl);
+  await dash.send("Page.enable");
+  await dash.send("Runtime.enable");
+  await sleep(1500);
+
+  // --- Config tab: API key should be loaded from storage ---
+  const apiKeyVal = await dash.eval(`document.getElementById('apiKey').value`);
+  log("  dashboard apiKey:", (apiKeyVal || "").slice(0, 8) + "...");
+  if (apiKeyVal && apiKeyVal.startsWith("sk-")) pass("dashboard config tab loaded with API key"); else fail("dashboard config: " + apiKeyVal);
+
+  // --- Language tab: switch source to en, target to en, save ---
+  // Click the "English" source button (2nd source seg-btn) and verify storage updates.
+  await dash.eval(`(function(){var btns=document.querySelectorAll('#panel-language .field:nth-child(1) .seg-btn');btns[2].click();return 'clicked';})()`);
+  await sleep(200);
+  await dash.eval(`document.getElementById('saveLangBtn').click()`);
+  await sleep(800);
+  const srcLang = await swc.eval(`new Promise(r=>chrome.storage.sync.get('sourceLang',v=>r(v.sourceLang||'none')))`);
+  log("  sourceLang after switch:", srcLang);
+  if (srcLang === "en") pass("dashboard language tab switches source language"); else fail("dashboard language switch: " + srcLang);
+  // restore to auto for cleanliness
+  await swc.eval(`new Promise(r=>chrome.storage.sync.set({sourceLang:'auto'},()=>r('ok')))`);
+
+  // --- Stats tab: should reflect the translations done in tests 1/3/4 ---
+  await dash.eval(`(function(){var t=document.querySelector('.tab[data-tab=\\'stats\\']');t.click();return t.classList.contains('active');})()`);
+  await sleep(1200);
+  const stats = JSON.parse(await dash.eval(`(function(){return JSON.stringify({req:document.getElementById('statRequests').textContent,total:document.getElementById('statTotal').textContent,bd:document.getElementById('breakdownKind').children.length});})()`) || "{}");
+  log("  stats:", JSON.stringify(stats));
+  const reqNum = parseInt((stats.req || "0").replace(/,/g, ""), 10);
+  const totalNum = parseInt((stats.total || "0").replace(/,/g, ""), 10);
+  if (reqNum >= 3 && totalNum > 0 && stats.bd >= 3) pass(`dashboard stats tab shows usage (req=${reqNum}, tokens=${totalNum})`);
+  else fail("dashboard stats: " + JSON.stringify(stats));
+  await dash.screenshot(path.join(__dirname, "shot-dashboard-stats.png"));
+
+  // --- History tab: should list records ---
+  await dash.eval(`(function(){var t=document.querySelector('.tab[data-tab=\\'history\\']');t.click();return t.classList.contains('active');})()`);
+  await sleep(1200);
+  const hist = JSON.parse(await dash.eval(`(function(){var list=document.getElementById('historyList');var empty=document.getElementById('historyEmpty');return JSON.stringify({items:list?list.children.length:0,emptyShown:empty?empty.style.display:''});})()`) || "{}");
+  log("  history:", JSON.stringify(hist));
+  if (hist.items >= 3 && hist.emptyShown === "none") pass(`dashboard history tab lists ${hist.items} records`);
+  else fail("dashboard history: " + JSON.stringify(hist));
+  await dash.screenshot(path.join(__dirname, "shot-dashboard-history.png"));
+  log("saved dashboard screenshots");
 }
 
 main().catch(e => { console.error("[test] fatal", e); process.exit(1); });

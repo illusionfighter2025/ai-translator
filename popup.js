@@ -124,6 +124,9 @@ els.revealKey.addEventListener("click", () => {
 
 els.optionsBtn.addEventListener("click", () => chrome.runtime.openOptionsPage());
 
+els.dashboardBtn = $("dashboardBtn");
+els.dashboardBtn.addEventListener("click", () => chrome.runtime.openOptionsPage());
+
 els.translatePageBtn.addEventListener("click", async () => {
   await sendToTab("translatePage");
   setTimeout(refreshPageState, 400);
