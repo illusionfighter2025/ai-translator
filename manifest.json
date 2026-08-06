@@ -3,7 +3,6 @@
   "name": "AI Translator",
   "version": "1.0.0",
   "description": "AI-powered browser translator: full-page translation, selection translation, and webpage summary. Compatible with OpenAI API.",
-  "default_locale": "en",
   "permissions": [
     "storage",
     "activeTab",

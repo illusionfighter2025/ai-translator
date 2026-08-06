@@ -144,9 +144,13 @@ async function chatCompletion(settings, messages, options = {}) {
     throw new Error(`API error ${resp.status}: ${text.slice(0, 500)}`);
   }
   const data = await resp.json();
-  const content = data?.choices?.[0]?.message?.content;
+  let content = data?.choices?.[0]?.message?.content;
+  if (!content) {
+    // Some reasoning models put output in reasoning_content when content is empty/null.
+    content = data?.choices?.[0]?.message?.reasoning_content;
+  }
   if (!content) throw new Error("Empty response from model.");
-  return { ok: true, content: content.trim(), usage: data.usage };
+  return { ok: true, content: content.trim(), usage: data.usage, finishReason: data?.choices?.[0]?.finish_reason };
 }
 
 async function testConnection(settings) {
@@ -163,33 +167,35 @@ async function testConnection(settings) {
 
 // ---- Batch translation ----
 // items: array of strings. Returns { ok, translations: string[] }
+// Translates each item individually for reliability with reasoning models.
 async function translateBatch(settings, items, source, target) {
   if (!items?.length) return { ok: true, translations: [] };
-  const srcLabel = source === "auto" ? "the source language" : (LANG_LABELS[source] || source);
   const tgtLabel = LANG_LABELS[target] || target;
-  const sys = `You are a professional translation engine. Translate each input text from ${srcLabel} to ${tgtLabel}. ` +
-    `Return ONLY a JSON array of strings, same length and order as the input array. ` +
-    `Preserve meaning, tone, formatting placeholders, and code. Do not add explanations.`;
-  const user = JSON.stringify(items);
-  try {
-    const res = await chatCompletion(settings, [
-      { role: "system", content: sys },
-      { role: "user", content: user }
-    ], { temperature: 0.2, maxTokens: Math.min(4096, Math.max(512, items.length * 64)) });
-    let parsed;
-    try {
-      parsed = JSON.parse(res.content);
-    } catch {
-      // try to extract JSON array
-      const m = res.content.match(/\[[\s\S]*\]/);
-      if (m) parsed = JSON.parse(m[0]);
-      else throw new Error("Model did not return valid JSON array.");
+  const other = target === "zh" ? "English" : "中文";
+  const sys = `You are a professional translation engine. ` +
+    `If the input is in English, translate it to 中文. If the input is in 中文, translate it to English. ` +
+    `This request's target language is ${tgtLabel} (so prefer ${tgtLabel} unless the input is already in ${tgtLabel}, then output ${other}). ` +
+    `Output ONLY the translated text. No explanations, no transliteration, no rephrasing in the source language. Preserve formatting and punctuation.`;
+  const out = new Array(items.length).fill("");
+  let okCount = 0;
+  let lastErr = "";
+  // Sequential to avoid rate limits; pages typically have a modest number of nodes.
+  for (let i = 0; i < items.length; i++) {
+    const text = items[i];
+    if (!text || !text.trim()) { out[i] = text || ""; okCount++; continue; }
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await chatCompletion(settings, [
+          { role: "system", content: sys },
+          { role: "user", content: text }
+        ], { temperature: 0.2, maxTokens: Math.min(2048, Math.max(64, text.length * 4)) });
+        if (res.content) { out[i] = res.content; okCount++; break; }
+        lastErr = "Empty response.";
+      } catch (e) {
+        lastErr = e?.message || String(e);
+      }
     }
-    if (!Array.isArray(parsed) || parsed.length !== items.length) {
-      throw new Error("Translation count mismatch.");
-    }
-    return { ok: true, translations: parsed.map(String) };
-  } catch (e) {
-    return { ok: false, error: e?.message || String(e), translations: items.map(() => "") };
   }
+  if (!okCount) return { ok: false, error: lastErr || "All translations failed.", translations: out };
+  return { ok: true, translations: out };
 }

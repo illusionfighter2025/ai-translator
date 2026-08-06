@@ -91,9 +91,11 @@
     positionTooltipNearSelection();
     const target = settings?.targetLang || "zh";
     const source = detectLang(text);
-    const sys = `You are a professional translator. Translate the user text to ${langLabel(target)}. ` +
-      `If the text is already in ${langLabel(target)}, translate it to the other language between Chinese and English. ` +
-      `Return only the translation, no explanations, preserving formatting.`;
+    const other = target === "zh" ? "English" : "中文";
+    const sys = `You are a professional translation engine. ` +
+      `If the input is in English, translate it to 中文. If the input is in 中文, translate it to English. ` +
+      `This request's target language is ${langLabel(target)} (so prefer ${langLabel(target)} unless the input is already in ${langLabel(target)}, then output ${other}). ` +
+      `Output ONLY the translated text. No explanations, no transliteration, no rephrasing in the source language. Preserve formatting and punctuation.`;
     try {
       const res = await chrome.runtime.sendMessage({
         type: "chat",
@@ -369,31 +371,37 @@
 
   // ---------- Message listener ----------
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    (async () => {
-      try {
-        if (msg.type === "translateSelection") {
-          await translateSelection(msg.text);
-        } else if (msg.type === "translateSelectionFromCommand") {
-          const text = window.getSelection()?.toString().trim() || lastSelectionText;
-          if (text) await translateSelection(text);
-          else showToast("Select some text first.");
-        } else if (msg.type === "translatePage") {
-          if (pageTranslated) restorePage();
-          else await translatePage();
-        } else if (msg.type === "restorePage") {
-          restorePage();
-        } else if (msg.type === "summarizePage") {
-          await summarizePage();
-        } else if (msg.type === "getState") {
-          sendResponse({ ok: true, pageTranslated, pageTranslating });
-        } else if (msg.type === "ping") {
-          sendResponse({ ok: true });
-        }
-      } catch (e) {
-        showToast("⚠ " + e.message, true);
+    try {
+      if (msg.type === "translateSelection") {
+        translateSelection(msg.text);
+        sendResponse({ ok: true });
+      } else if (msg.type === "translateSelectionFromCommand") {
+        const text = window.getSelection()?.toString().trim() || lastSelectionText;
+        if (text) translateSelection(text);
+        else showToast("Select some text first.");
+        sendResponse({ ok: true });
+      } else if (msg.type === "translatePage") {
+        if (pageTranslated) restorePage();
+        else translatePage();
+        sendResponse({ ok: true });
+      } else if (msg.type === "restorePage") {
+        restorePage();
+        sendResponse({ ok: true });
+      } else if (msg.type === "summarizePage") {
+        summarizePage();
+        sendResponse({ ok: true });
+      } else if (msg.type === "getState") {
+        sendResponse({ ok: true, pageTranslated, pageTranslating });
+      } else if (msg.type === "ping") {
+        sendResponse({ ok: true });
+      } else {
+        sendResponse({ ok: false, error: "unknown message: " + msg.type });
       }
-    })();
-    return true;
+    } catch (e) {
+      showToast("⚠ " + e.message, true);
+      sendResponse({ ok: false, error: e.message });
+    }
+    return false; // synchronous response sent above
   });
 
   // init
