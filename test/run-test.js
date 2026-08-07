@@ -11,6 +11,16 @@ const PROFILE_DIR = path.join(require("os").tmpdir(), "ait-e2e-" + Date.now());
 const PORT = 9231;
 const TEST_URL = "http://127.0.0.1:8765/test-page.html";
 
+// Test credentials are read from environment variables (never committed).
+// Copy .env.example values into your shell or a .env loader before running.
+const TEST_API_KEY = process.env.AIT_TEST_API_KEY || "";
+const TEST_BASE_URL = process.env.AIT_TEST_BASE_URL || "https://api.deepseek.com";
+const TEST_MODEL = process.env.AIT_TEST_MODEL || "deepseek-v4-flash";
+if (!TEST_API_KEY) {
+  console.error("[test] AIT_TEST_API_KEY env var is not set. Set it before running, e.g.:\n  $env:AIT_TEST_API_KEY='sk-...'; node test/run-test.js");
+  process.exit(1);
+}
+
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const httpJson = u => new Promise((res, rej) => { http.get(u, r => { let d=""; r.on("data",c=>d+=c); r.on("end",()=>res(JSON.parse(d))); }).on("error", rej); });
 
@@ -81,7 +91,7 @@ async function main() {
   await swc.send("Runtime.enable");
 
   // Configure the extension by writing to chrome.storage.sync (available in MY extension's SW context).
-  const cfgSet = await swc.eval(`new Promise(r=>chrome.storage.sync.set({apiKey:'REDACTED_API_KEY',baseUrl:'https://api.deepseek.com',model:'deepseek-v4-flash',targetLang:'zh',autoSelection:true,temperature:0.3,maxTokens:2048},()=>r('ok')))`);
+  const cfgSet = await swc.eval(`new Promise(r=>chrome.storage.sync.set({apiKey:${JSON.stringify(TEST_API_KEY)},baseUrl:${JSON.stringify(TEST_BASE_URL)},model:${JSON.stringify(TEST_MODEL)},targetLang:'zh',autoSelection:true,temperature:0.3,maxTokens:2048},()=>r('ok')))`);
   log("storage.set:", cfgSet);
   const cfgGet = await swc.eval(`new Promise(r=>chrome.storage.sync.get(['apiKey','baseUrl','model'],v=>r(JSON.stringify(v))))`);
   log("storage.get:", cfgGet);
