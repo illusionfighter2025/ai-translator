@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="AI Translator — 兼容 OpenAI 协议的浏览器翻译插件，支持全页面翻译、划词翻译与网页总结，让阅读外文网页如沐暖阳。" />
+  <title>AI Translator · 让世界温暖地读懂你</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Noto+Serif+SC:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23C56B4A'/><text x='50' y='70' font-size='58' font-family='serif' fill='white' text-anchor='middle'>译</text></svg>" />
+</head>
+<body>
+  <header class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="#top" class="brand">
+        <span class="brand-mark">译</span>
+        <span class="brand-name">AI Translator</span>
+      </a>
+      <nav class="nav-links" id="navLinks">
+        <a href="#features">核心功能</a>
+        <a href="#how">产品介绍</a>
+        <a href="#install">安装步骤</a>
+        <a href="#faq">常见问题</a>
+        <a href="#install" class="nav-cta">免费安装</a>
+      </nav>
+      <button class="nav-toggle" id="navToggle" aria-label="菜单"><span></span><span></span><span></span></button>
+    </div>
+  </header>
+
+  <section class="hero" id="top">
+    <div class="hero-glow"></div>
+    <div class="hero-inner">
+      <div class="hero-copy reveal">
+        <p class="eyebrow">兼容 OpenAI 协议 · 浏览器原生体验</p>
+        <h1>让世界<br /><em>温暖地</em>读懂你</h1>
+        <p class="lede">一款为阅读而生的 AI 翻译插件。整页翻译、划词释义、长文总结——把你不懂的语言，变成你熟悉的温度。</p>
+        <div class="hero-cta">
+          <a href="#install" class="btn btn-primary">立即安装 →</a>
+          <a href="#features" class="btn btn-ghost">了解功能</a>
+        </div>
+        <div class="hero-meta">
+          <span>✓ 免费 · 开源</span><span>✓ 自带 API Key</span><span>✓ 中英互译</span>
+        </div>
+      </div>
+      <div class="hero-visual reveal">
+        <div class="browser-mock">
+          <div class="browser-bar">
+            <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+            <div class="url">reading-the-world.example</div>
+          </div>
+          <div class="browser-body">
+            <div class="mock-line w70"></div><div class="mock-line w90"></div><div class="mock-line w60"></div>
+            <div class="mock-translated">
+              <div class="t-row"><span class="t-src">Artificial Intelligence and the Modern Web</span></div>
+              <div class="t-row"><span class="t-tgt">人工智能与现代网络</span></div>
+              <div class="mock-line w80"></div><div class="mock-line w95"></div><div class="mock-line w50"></div>
+            </div>
+          </div>
+          <div class="float-badge badge-summary"><span class="badge-icon">✦</span><div><strong>网页总结</strong><small>已生成 3 条要点</small></div></div>
+          <div class="float-badge badge-tip"><span class="badge-icon">译</span><div><strong>划词翻译</strong><small>悬浮即译</small></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-scroll">向下滚动 ↓</div>
+  </section>
+
+  <section class="strip">
+    <div class="strip-track">
+      <span>全页面翻译</span><span class="dot-sep">·</span><span>划词翻译</span><span class="dot-sep">·</span><span>网页总结</span><span class="dot-sep">·</span><span>OpenAI 协议</span><span class="dot-sep">·</span><span>DeepSeek</span><span class="dot-sep">·</span><span>自定义模型</span><span class="dot-sep">·</span><span>中英互译</span><span class="dot-sep">·</span><span>全页面翻译</span><span class="dot-sep">·</span><span>划词翻译</span><span class="dot-sep">·</span><span>网页总结</span><span class="dot-sep">·</span><span>OpenAI 协议</span><span class="dot-sep">·</span><span>DeepSeek</span><span class="dot-sep">·</span><span>自定义模型</span><span class="dot-sep">·</span><span>中英互译</span><span class="dot-sep">·</span>
+    </div>
+  </section>
+
+  <section class="intro" id="how">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="kicker">产品介绍</p>
+        <h2>把语言障碍，<br />化作一缕暖意</h2>
+      </div>
+      <div class="intro-grid">
+        <div class="intro-text reveal">
+          <p>AI Translator 是一款运行在浏览器中的智能翻译伙伴。它不替你思考，而是替你<span class="hl">省去思考的负担</span>——当你打开一篇外文长文、一段陌生术语、一个来不及读完的页面，它已经悄悄把内容，变成了你读得懂的样子。</p>
+          <p>它兼容 OpenAI 协议，意味着你可以自由选择背后的模型：DeepSeek、OpenAI、OpenRouter……把 API Key 放进设置，剩下的，交给它。</p>
+          <ul class="intro-list">
+            <li><span class="tick">✓</span> 本地保存配置，密钥不离设备</li>
+            <li><span class="tick">✓</span> 保留原网页版式，只换文字</li>
+            <li><span class="tick">✓</span> 一键还原原文，随时对照</li>
+            <li><span class="tick">✓</span> 管理面板统计 Token 消耗</li>
+          </ul>
+        </div>
+        <div class="intro-visual reveal">
+          <div class="card-stack">
+            <div class="stack-card stack-1">
+              <div class="sc-head"><span class="sc-mark">译</span><span>AI Translator</span></div>
+              <div class="sc-body">
+                <div class="sc-row"><span class="sc-label">目标语言</span><span class="seg"><b>中文</b><i>English</i></span></div>
+                <div class="sc-row"><span class="sc-label">API Key</span><span class="sc-input">sk-••••••••</span></div>
+                <div class="sc-row"><span class="sc-label">模型</span><span class="sc-input">deepseek-v4-flash</span></div>
+                <div class="sc-actions"><span class="sc-btn">测试</span><span class="sc-btn primary">保存</span></div>
+              </div>
+            </div>
+            <div class="stack-card stack-2">
+              <div class="sc-head"><span>Token 统计</span></div>
+              <div class="sc-stats">
+                <div><b>3</b><small>总请求</small></div>
+                <div><b>4,782</b><small>总 Token</small></div>
+                <div><b>2,196</b><small>输入</small></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main id="rest">
+  <!-- ===== Features ===== -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-head center reveal">
+        <p class="kicker">核心功能</p>
+        <h2>三件趁手的工具，<br />一种温暖的节奏</h2>
+        <p class="sub">无论是一整页、一个词，还是一篇文章——总有一种方式，恰好合用。</p>
+      </div>
+
+      <div class="feature feature-1 reveal">
+        <div class="feature-visual">
+          <div class="browser-mock small">
+            <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="url">foreign-article.example</div></div>
+            <div class="browser-body">
+              <div class="mock-line w60"></div><div class="mock-line w90"></div>
+              <div class="mock-translated">
+                <div class="t-row"><span class="t-src">The quick brown fox…</span></div>
+                <div class="t-row"><span class="t-tgt">敏捷的棕色狐狸…</span></div>
+                <div class="mock-line w85"></div><div class="mock-line w70"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="feature-copy">
+          <span class="feature-num">01</span>
+          <h3>全页面翻译</h3>
+          <p>点一下，整页文字便悄然换成你的语言。原网页的版式、图片、链接原封不动——只是文字，变得亲切。读完了？再点一下，原文即刻归来。</p>
+          <ul class="feature-points">
+            <li>保留原页面结构，阅读不跳行</li>
+            <li>一键翻译 / 一键还原</li>
+            <li>支持快捷键 Alt + T</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="feature feature-2 reveal">
+        <div class="feature-copy">
+          <span class="feature-num">02</span>
+          <h3>划词翻译</h3>
+          <p>遇到一个不认识的词、一句没看懂的话？用鼠标轻轻一选，一个小小的浮窗便在旁边亮起，给出恰到好处的释义——不打断你的阅读，只补上那一处空白。</p>
+          <ul class="feature-points">
+            <li>选中即译，悬浮浮窗</li>
+            <li>一键复制译文</li>
+            <li>可开关自动翻译</li>
+          </ul>
+        </div>
+        <div class="feature-visual">
+          <div class="tooltip-mock">
+            <div class="tm-text">…an <span class="hl-word">ephemeral</span> moment…</div>
+            <div class="tm-tip">
+              <div class="tm-head"><span>AI Translate</span><i>EN → 中文</i></div>
+              <div class="tm-body">短暂的；瞬息的</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature feature-3 reveal">
+        <div class="feature-visual">
+          <div class="summary-mock">
+            <div class="sm-head"><span>✦ 网页总结</span><i>✕</i></div>
+            <div class="sm-body">
+              <div class="sm-h">Summary</div>
+              <div class="sm-p"></div><div class="sm-p w80"></div>
+              <div class="sm-h sm-h2">Key Points</div>
+              <div class="sm-li"></div><div class="sm-li"></div><div class="sm-li w70"></div>
+              <div class="sm-h sm-h2">Takeaways</div>
+              <div class="sm-li"></div><div class="sm-li w90"></div>
+            </div>
+          </div>
+        </div>
+        <div class="feature-copy">
+          <span class="feature-num">03</span>
+          <h3>网页总结</h3>
+          <p>一篇文章太长，来不及细读？让 AI 先替你读完，把要点和结论提炼成几行——你只需看一眼，便知其大意。像一位耐心的朋友，替你把厚厚一摞纸，翻成了薄薄一页。</p>
+          <ul class="feature-points">
+            <li>结构化输出：摘要 / 要点 / 启示</li>
+            <li>支持快捷键 Alt + S</li>
+            <li>一键复制全文</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Install ===== -->
+  <section class="install" id="install">
+    <div class="container">
+      <div class="section-head center reveal">
+        <p class="kicker">安装步骤</p>
+        <h2>四步，让翻译住进浏览器</h2>
+        <p class="sub">无需注册，无需付费，几分钟即可上手。</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal">
+          <div class="step-num">1</div>
+          <h4>下载插件</h4>
+          <p>从源码仓库获取插件文件夹，解压到本地任意位置。</p>
+        </div>
+        <div class="step reveal">
+          <div class="step-num">2</div>
+          <h4>打开扩展页</h4>
+          <p>在浏览器地址栏输入 <code>edge://extensions</code> 或 <code>chrome://extensions</code>。</p>
+        </div>
+        <div class="step reveal">
+          <div class="step-num">3</div>
+          <h4>开启开发者模式</h4>
+          <p>打开右上角「开发者模式」开关，点击「加载解压缩的扩展」。</p>
+        </div>
+        <div class="step reveal">
+          <div class="step-num">4</div>
+          <h4>配置 API Key</h4>
+          <p>点击插件图标，在弹窗填入 API Key、Base URL 与模型，保存即可。</p>
+        </div>
+      </div>
+      <div class="install-note reveal">
+        <div class="note-card">
+          <span class="note-icon">💡</span>
+          <div>
+            <strong>兼容哪些模型？</strong>
+            <p>凡兼容 OpenAI 协议的接口皆可使用——DeepSeek、OpenAI、OpenRouter、本地 Ollama 等。在管理面板中切换源 / 目标语言，并查看 Token 消耗与翻译历史。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FAQ ===== -->
+  <section class="faq" id="faq">
+    <div class="container narrow">
+      <div class="section-head center reveal">
+        <p class="kicker">常见问题</p>
+        <h2>你可能想问</h2>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item reveal"><summary>插件是免费的吗？</summary><p>完全免费且开源。你只需自备一个兼容 OpenAI 协议的 API Key，翻译产生的费用由你选择的模型供应商按其定价收取。</p></details>
+        <details class="faq-item reveal"><summary>我的 API Key 安全吗？</summary><p>密钥仅保存在你本地的浏览器存储（chrome.storage）中，不会上传到任何第三方服务器，也不会离开你的设备。</p></details>
+        <details class="faq-item reveal"><summary>支持哪些浏览器？</summary><p>基于 Manifest V3 开发，兼容 Microsoft Edge、Google Chrome 及其他 Chromium 内核浏览器。</p></details>
+        <details class="faq-item reveal"><summary>翻译后还能看原文吗？</summary><p>可以。再次点击「翻译页面」按钮或按 Alt + T 即可一键还原原文，随时中英对照。</p></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA ===== -->
+  <section class="cta">
+    <div class="container narrow center reveal">
+      <h2>把外文网页，<br />读成你喜欢的样子</h2>
+      <p>现在就开始，让每一次阅读都更轻松一点。</p>
+      <a href="#install" class="btn btn-primary big">立即安装 AI Translator →</a>
+    </div>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="#top" class="brand"><span class="brand-mark">译</span><span class="brand-name">AI Translator</span></a>
+          <p>让世界温暖地读懂你。<br />兼容 OpenAI 协议的浏览器翻译插件。</p>
+        </div>
+        <div class="footer-col">
+          <h5>功能</h5>
+          <a href="#features">全页面翻译</a>
+          <a href="#features">划词翻译</a>
+          <a href="#features">网页总结</a>
+        </div>
+        <div class="footer-col">
+          <h5>开始</h5>
+          <a href="#install">安装步骤</a>
+          <a href="#faq">常见问题</a>
+          <a href="#how">产品介绍</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 AI Translator · Made with warmth</span>
+        <span>兼容 OpenAI · DeepSeek · OpenRouter</span>
+      </div>
+    </div>
+  </footer>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
