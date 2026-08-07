@@ -5,8 +5,19 @@ const fs = require("fs");
 const path = require("path");
 const WS = require("ws");
 
-const EXT_DIR = "H:\\ai translator";
-const CHROME = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+// Project root = parent of this test/ directory. Override with AIT_TEST_EXT_DIR if needed.
+const EXT_DIR = process.env.AIT_TEST_EXT_DIR || path.resolve(__dirname, "..");
+// Browser binary: override with AIT_TEST_BROWSER. Defaults try common Edge/Chrome locations.
+const CHROME = process.env.AIT_TEST_BROWSER || [
+  "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+  "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+].find(fs.existsSync);
+if (!CHROME) {
+  console.error("[test] Could not find a browser binary. Set AIT_TEST_BROWSER to your Edge/Chrome path.");
+  process.exit(1);
+}
 const PROFILE_DIR = path.join(require("os").tmpdir(), "ait-e2e-" + Date.now());
 const PORT = 9231;
 const TEST_URL = "http://127.0.0.1:8765/test-page.html";

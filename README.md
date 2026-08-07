@@ -21,7 +21,7 @@ Bring your own provider: OpenAI, DeepSeek, OpenRouter, Moonshot, local LLMs (Oll
 
 1. Open Chrome and go to `chrome://extensions`.
 2. Enable **Developer mode** (top-right toggle).
-3. Click **Load unpacked** and select this folder (`H:\ai translator`).
+3. Click **Load unpacked** and select this project folder.
 4. The extension icon appears in your toolbar. Pin it for easy access.
 
 ## Configuration
